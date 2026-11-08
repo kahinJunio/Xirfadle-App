@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xirfadle_app/app/config/api_config.dart';
-import 'package:xirfadle_app/core/models/request_status.dart';
 import 'package:xirfadle_app/core/models/service_request.dart';
 import 'package:xirfadle_app/core/network/dio_client.dart';
 import 'package:xirfadle_app/features/provider/application/provider_job_controller.dart';
@@ -35,9 +34,9 @@ class _FakeAdapter implements HttpClientAdapter {
       return _json({'message': 'Job already taken'}, status: failure);
     }
 
-    if (options.path == ApiConfig.providerRequests) return _json(dispatched);
+    if (options.path == ApiConfig.assignedRequests) return _json(dispatched);
 
-    // respond / start / complete all answer with the updated job.
+    // respond / complete both answer with the updated job.
     return _json(dispatched.isEmpty ? <String, dynamic>{} : dispatched.first);
   }
 
@@ -270,23 +269,14 @@ void main() {
       expect(call.body, containsPair('rejectionReason', 'Too far from my area'));
     });
 
-    test('start then complete walks the job through the tracker', () async {
+    test('completing an accepted job moves it into the completed bucket',
+        () async {
       final adapter = _FakeAdapter([_job(status: 'AcceptedByProvider')]);
       final container = _containerWith(adapter);
       addTearDown(container.dispose);
 
       await container.read(dispatchedRequestsProvider.future);
-
-      adapter.dispatched = [_job(status: 'InProgress')];
-      expect(
-        await container
-            .read(jobActionControllerProvider.notifier)
-            .start('job-1'),
-        isNull,
-      );
-      expect(adapter.callTo(ApiConfig.startRequest('job-1')).method, 'PATCH');
-      expect(container.read(activeJobsProvider).single.status,
-          RequestStatus.inProgress);
+      expect(container.read(activeJobsProvider), hasLength(1));
 
       adapter.dispatched = [_job(status: 'Completed')];
       expect(
@@ -298,6 +288,26 @@ void main() {
       expect(adapter.callTo(ApiConfig.completeRequest('job-1')).method, 'PATCH');
       expect(container.read(activeJobsProvider), isEmpty);
       expect(container.read(completedJobsProvider), hasLength(1));
+    });
+
+    // The API has no `start` transition; accepted jobs go straight to complete.
+    test('start reports that the transition is unsupported', () async {
+      final adapter = _FakeAdapter([_job(status: 'AcceptedByProvider')]);
+      final container = _containerWith(adapter);
+      addTearDown(container.dispose);
+
+      await container.read(dispatchedRequestsProvider.future);
+      adapter.calls.clear();
+
+      expect(
+        await container
+            .read(jobActionControllerProvider.notifier)
+            .start('job-1'),
+        'Starting a job is not supported yet.',
+      );
+      expect(adapter.calls, isEmpty);
+      expect(container.read(jobActionControllerProvider), isNull,
+          reason: 'the controller must release its lock');
     });
 
     test('surfaces the API message when the job was already taken', () async {
@@ -318,7 +328,8 @@ void main() {
   });
 
   group('AvailabilityController', () {
-    test('keeps the optimistic value the server confirms', () async {
+    // No duty-toggle route exists yet, so the switch is local to the app.
+    test('keeps the toggled value without calling the API', () async {
       final adapter = _FakeAdapter([]);
       final container = _containerWith(adapter);
       addTearDown(container.dispose);
@@ -332,22 +343,7 @@ void main() {
 
       expect(error, isNull);
       expect(container.read(availabilityControllerProvider).valueOrNull, isTrue);
-      expect(adapter.callTo(ApiConfig.availability).body,
-          containsPair('isAvailable', true));
-    });
-
-    test('rolls back when the API rejects the change', () async {
-      final adapter = _FakeAdapter([])..failWithStatus = 500;
-      final container = _containerWith(adapter);
-      addTearDown(container.dispose);
-
-      final error = await container
-          .read(availabilityControllerProvider.notifier)
-          .toggle(true);
-
-      expect(error, isNotNull);
-      expect(
-          container.read(availabilityControllerProvider).valueOrNull, isFalse);
+      expect(adapter.calls, isEmpty);
     });
   });
 }

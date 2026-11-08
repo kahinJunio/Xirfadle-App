@@ -5,6 +5,7 @@ import '../../../core/models/json_utils.dart';
 import '../../../core/models/service_category.dart';
 import '../../../core/models/service_provider.dart';
 import '../../../core/models/service_request.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../core/network/dio_client.dart';
 
 class CustomerRepository {
@@ -53,11 +54,10 @@ class CustomerRepository {
     return ServiceProvider.fromJson(asObject(response));
   }
 
-  Future<List<ProviderReview>> fetchProviderReviews(String id) async {
-    final response =
-        await _api.get<dynamic>('${ApiConfig.providerDetail(id)}/reviews');
-    return asObjectList(response).map(ProviderReview.fromJson).toList();
-  }
+  /// The API exposes no reviews route, so the detail screen renders whatever
+  /// the provider payload already carries and nothing more.
+  Future<List<ProviderReview>> fetchProviderReviews(String id) async =>
+      const <ProviderReview>[];
 
   /// Submits a job; the backend initialises it to `PendingAdminReview`.
   Future<ServiceRequest> createRequest(CreateRequestPayload payload) async {
@@ -67,7 +67,7 @@ class CustomerRepository {
   }
 
   Future<List<ServiceRequest>> fetchMyRequests() async {
-    final response = await _api.get<dynamic>(ApiConfig.requests);
+    final response = await _api.get<dynamic>(ApiConfig.myRequests);
     final requests =
         asObjectList(response).map(ServiceRequest.fromJson).toList();
     requests.sort((a, b) => (b.createdAt ?? DateTime(1970))
@@ -75,25 +75,30 @@ class CustomerRepository {
     return requests;
   }
 
+  /// There is no by-id read on the API; the request is picked out of the
+  /// customer's own feed.
   Future<ServiceRequest> fetchRequest(String id) async {
-    final response = await _api.get<dynamic>('${ApiConfig.requests}/$id');
-    return ServiceRequest.fromJson(asObject(response));
+    final match =
+        (await fetchMyRequests()).where((r) => r.id == id).firstOrNull;
+    if (match == null) {
+      throw const ApiException('That request is no longer available.',
+          statusCode: 404);
+    }
+    return match;
   }
 
-  Future<void> cancelRequest(String id) =>
-      _api.patch<dynamic>('${ApiConfig.requests}/$id/cancel');
+  Future<void> cancelRequest(String id) async {
+    throw const ApiException(
+        'Cancelling a request is not supported yet. Please contact support.');
+  }
 
   Future<void> submitReview({
     required String requestId,
     required int rating,
     String? comment,
-  }) =>
-      _api.post<dynamic>(ApiConfig.reviews, data: {
-        'serviceRequestId': requestId,
-        'rating': rating,
-        if (comment != null && comment.trim().isNotEmpty)
-          'comment': comment.trim(),
-      });
+  }) async {
+    throw const ApiException('Reviews are not available yet.');
+  }
 }
 
 final customerRepositoryProvider = Provider<CustomerRepository>(

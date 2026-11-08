@@ -62,18 +62,21 @@ class ServiceRequest {
         id: asString(json, ['id', 'requestId', 'serviceRequestId']),
         status: RequestStatus.fromWire(
             asStringOrNull(json, ['status', 'requestStatus', 'state'])),
-        categoryName: asString(json, ['categoryName', 'category', 'serviceName'],
+        categoryName: asString(json,
+            ['serviceCategoryName', 'categoryName', 'category', 'serviceName'],
             fallback: 'Service'),
         description: asString(json, ['description', 'details', 'problem'],
             fallback: 'No description provided.'),
-        address: asString(json, ['address', 'location', 'addressText'],
+        address: asString(
+            json, ['customerAddress', 'address', 'location', 'addressText'],
             fallback: 'Address not provided'),
         referenceCode: asStringOrNull(json, ['referenceCode', 'reference', 'code']),
-        categoryId: asStringOrNull(json, ['categoryId']),
+        categoryId: asStringOrNull(json, ['serviceCategoryId', 'categoryId']),
         customerName: asStringOrNull(json, ['customerName', 'customer']),
         customerPhone:
             asStringOrNull(json, ['customerPhone', 'customerPhoneNumber']),
-        providerName: asStringOrNull(json, ['providerName', 'provider']),
+        providerName: asStringOrNull(
+            json, ['assignedProviderName', 'providerName', 'provider']),
         providerPhone:
             asStringOrNull(json, ['providerPhone', 'providerPhoneNumber']),
         agreedPrice: asDoubleOrNull(json, ['agreedPrice', 'price', 'amount']),
@@ -82,8 +85,10 @@ class ServiceRequest {
         longitude: asDoubleOrNull(json, ['longitude', 'lng', 'lon']),
         preferredTime:
             asStringOrNull(json, ['preferredTime', 'timingPreference', 'timing']),
-        createdAt: asDateOrNull(json, ['createdAt', 'createdOn', 'submittedAt']),
-        updatedAt: asDateOrNull(json, ['updatedAt', 'modifiedOn']),
+        createdAt: asDateOrNull(
+            json, ['createdAtUtc', 'createdAt', 'createdOn', 'submittedAt']),
+        updatedAt:
+            asDateOrNull(json, ['updatedAtUtc', 'updatedAt', 'modifiedOn']),
         rejectionReason: asStringOrNull(json, ['rejectionReason', 'reason']),
         hasReview: asBool(json, ['hasReview', 'isReviewed', 'reviewed']),
       );
@@ -109,15 +114,18 @@ class CreateRequestPayload {
   final double? longitude;
   final String? preferredProviderId;
 
+  /// Mirrors the backend's `CreateServiceRequestDto`
+  /// (`serviceCategoryId`, `customerAddress`, `latitude`, `longitude`).
+  /// The remaining fields are not part of the DTO yet and are ignored by the
+  /// server; they are sent so nothing changes here once it accepts them.
   Map<String, dynamic> toJson() => {
-        'categoryId': categoryId,
-        'description': description,
-        'address': address,
-        if (preferredTime != null) 'preferredTime': preferredTime,
+        'serviceCategoryId': categoryId,
+        'customerAddress': address,
         if (latitude != null) 'latitude': latitude,
         if (longitude != null) 'longitude': longitude,
+        'description': description,
+        if (preferredTime != null) 'preferredTime': preferredTime,
         if (preferredProviderId != null)
           'preferredProviderId': preferredProviderId,
-        'status': 'PendingAdminReview',
       };
 }

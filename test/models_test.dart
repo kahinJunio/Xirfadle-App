@@ -63,14 +63,17 @@ void main() {
   });
 
   group('CreateRequestPayload', () {
-    test('initialises the status to PendingAdminReview', () {
+    test('matches the backend CreateServiceRequestDto field names', () {
       final json = const CreateRequestPayload(
         categoryId: 'cat-1',
         description: 'Broken pipe under the sink',
         address: 'Hodan',
       ).toJson();
 
-      expect(json['status'], 'PendingAdminReview');
+      expect(json['serviceCategoryId'], 'cat-1');
+      expect(json['customerAddress'], 'Hodan');
+      // The server sets the initial status itself.
+      expect(json.containsKey('status'), isFalse);
       expect(json.containsKey('latitude'), isFalse);
     });
 

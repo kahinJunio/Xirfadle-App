@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -34,6 +36,10 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
 
+  /// How long a submit error stays on screen before it clears itself.
+  static const _errorDisplayDuration = Duration(seconds: 4);
+  Timer? _errorTimer;
+
   @override
   void initState() {
     super.initState();
@@ -44,6 +50,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
 
   @override
   void dispose() {
+    _errorTimer?.cancel();
     _descriptionController.dispose();
     super.dispose();
   }
@@ -80,12 +87,19 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
 
     final ok = await controller.submit();
     if (!mounted) return;
-    if (ok) {
-      context.pushReplacement(AppRoutes.requestConfirmation);
-    } else {
-      final message = ref.read(createRequestControllerProvider).errorMessage;
-      if (message != null) _showMessage(message);
-    }
+    // On failure the error banner shows the message; see the listener in build.
+    if (ok) context.pushReplacement(AppRoutes.requestConfirmation);
+  }
+
+  /// Restarts the auto-dismiss countdown whenever a new error appears.
+  void _onErrorChanged(String? previous, String? next) {
+    _errorTimer?.cancel();
+    if (next == null) return;
+    _errorTimer = Timer(_errorDisplayDuration, () {
+      if (mounted) {
+        ref.read(createRequestControllerProvider.notifier).clearError();
+      }
+    });
   }
 
   void _showMessage(String message) {
@@ -100,6 +114,10 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
     final state = ref.watch(createRequestControllerProvider);
     final controller = ref.read(createRequestControllerProvider.notifier);
     final categories = ref.watch(categoriesProvider);
+    ref.listen<String?>(
+      createRequestControllerProvider.select((s) => s.errorMessage),
+      _onErrorChanged,
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Request a service')),
@@ -213,10 +231,15 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
                   ],
                 ),
               ),
-              if (state.errorMessage != null) ...[
-                const SizedBox(height: 16),
-                ErrorBanner(message: state.errorMessage!),
-              ],
+              AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                child: state.errorMessage == null
+                    ? const SizedBox(width: double.infinity)
+                    : Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: ErrorBanner(message: state.errorMessage!),
+                      ),
+              ),
               const SizedBox(height: 22),
               FilledButton.icon(
                 onPressed: state.isSubmitting ? null : _submit,

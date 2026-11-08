@@ -58,7 +58,10 @@ class ApiException implements Exception {
               ? value.map((e) => e.toString()).toList()
               : [value.toString()];
         });
-        message ??= fieldErrors.values.firstOrNull?.firstOrNull;
+        // ASP.NET's `title` here is the generic "One or more validation
+        // errors occurred." — the field messages are what the user needs.
+        final details = fieldErrors.values.expand((e) => e).toList();
+        if (details.isNotEmpty) message = details.join('\n');
       }
     } else if (data is String && data.isNotEmpty && data.length < 300) {
       message = data;

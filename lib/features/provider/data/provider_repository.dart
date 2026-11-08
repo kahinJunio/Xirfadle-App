@@ -4,6 +4,7 @@ import '../../../app/config/api_config.dart';
 import '../../../core/models/json_utils.dart';
 import '../../../core/models/request_status.dart';
 import '../../../core/models/service_request.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../core/network/dio_client.dart';
 
 class ProviderRepository {
@@ -13,7 +14,7 @@ class ProviderRepository {
 
   /// Every job dispatched to this provider, in any state.
   Future<List<ServiceRequest>> fetchDispatchedRequests() async {
-    final response = await _api.get<dynamic>(ApiConfig.providerRequests);
+    final response = await _api.get<dynamic>(ApiConfig.assignedRequests);
     final requests =
         asObjectList(response).map(ServiceRequest.fromJson).toList();
     requests.sort((a, b) => (b.createdAt ?? DateTime(1970))
@@ -21,23 +22,20 @@ class ProviderRepository {
     return requests;
   }
 
+  /// There is no by-id read on the API; the job is picked out of the
+  /// assigned feed.
   Future<ServiceRequest> fetchRequest(String id) async {
-    final response =
-        await _api.get<dynamic>('${ApiConfig.providerRequests}/$id');
-    return ServiceRequest.fromJson(asObject(response));
+    final match =
+        (await fetchDispatchedRequests()).where((r) => r.id == id).firstOrNull;
+    if (match == null) {
+      throw const ApiException('That job is no longer assigned to you.',
+          statusCode: 404);
+    }
+    return match;
   }
 
-  /// Flips the duty toggle so admins know whether to dispatch.
-  Future<bool> setAvailability(bool isAvailable) async {
-    final response = await _api.patch<dynamic>(
-      ApiConfig.availability,
-      data: {'isAvailable': isAvailable},
-    );
-    final json = asObject(response);
-    return json.isEmpty
-        ? isAvailable
-        : asBool(json, ['isAvailable', 'available'], fallback: isAvailable);
-  }
+  /// No duty-toggle route exists yet, so the switch stays local to the app.
+  Future<bool> setAvailability(bool isAvailable) async => isAvailable;
 
   Future<ServiceRequest> respondToRequest({
     required String id,
@@ -57,9 +55,10 @@ class ProviderRepository {
     return _requestOrRefetch(response, id);
   }
 
+  /// The API has no `start` transition: a job goes from accepted straight to
+  /// completed.
   Future<ServiceRequest> startJob(String id) async {
-    final response = await _api.patch<dynamic>(ApiConfig.startRequest(id));
-    return _requestOrRefetch(response, id);
+    throw const ApiException('Starting a job is not supported yet.');
   }
 
   Future<ServiceRequest> completeJob(String id) async {

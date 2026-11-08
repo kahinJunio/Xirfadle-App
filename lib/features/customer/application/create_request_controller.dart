@@ -83,6 +83,10 @@ class CreateRequestController extends StateNotifier<CreateRequestState> {
   void setAddress(String address, {LatLng? pin}) =>
       state = state.copyWith(address: address, pin: pin, clearError: true);
 
+  void clearError() {
+    if (state.errorMessage != null) state = state.copyWith(clearError: true);
+  }
+
   void reset() => state = const CreateRequestState();
 
   Future<bool> submit() async {

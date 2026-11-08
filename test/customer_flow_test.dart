@@ -200,8 +200,8 @@ void main() {
 
       final call = adapter.callTo(ApiConfig.requests);
       expect(call.method, 'POST');
-      expect(call.body, containsPair('categoryId', 'cat-plumbing'));
-      expect(call.body, containsPair('status', 'PendingAdminReview'));
+      expect(call.body, containsPair('serviceCategoryId', 'cat-plumbing'));
+      expect(call.body, containsPair('customerAddress', 'Hodan district'));
       expect(call.body, containsPair('preferredTime', 'Today'));
       expect(call.body, containsPair('latitude', 2.0469));
 
@@ -251,52 +251,25 @@ void main() {
   });
 
   group('ReviewController', () {
-    test('posts the rating against the service request', () async {
-      final adapter = _FakeAdapter({ApiConfig.reviews: <String, dynamic>{}});
+    // The API exposes no reviews route, so submitting reports the gap instead
+    // of firing a request that would 404.
+    test('reports that reviews are unavailable without calling the API',
+        () async {
+      final adapter = _FakeAdapter({});
       final container = _containerWith(adapter);
       addTearDown(container.dispose);
 
       _keepAlive(container, reviewControllerProvider);
       final controller = container.read(reviewControllerProvider.notifier);
       controller.setRating(4);
-      controller.setComment('  Fast and tidy work.  ');
+      controller.setComment('Fast and tidy work.');
 
-      expect(await controller.submit('req-1'), isTrue);
-
-      final call = adapter.callTo(ApiConfig.reviews);
-      expect(call.method, 'POST');
-      expect(call.body, containsPair('serviceRequestId', 'req-1'));
-      expect(call.body, containsPair('rating', 4));
-      expect(call.body, containsPair('comment', 'Fast and tidy work.'));
-    });
-
-    test('omits an empty comment', () async {
-      final adapter = _FakeAdapter({ApiConfig.reviews: <String, dynamic>{}});
-      final container = _containerWith(adapter);
-      addTearDown(container.dispose);
-
-      _keepAlive(container, reviewControllerProvider);
-      expect(
-        await container.read(reviewControllerProvider.notifier).submit('req-1'),
-        isTrue,
-      );
-
-      final body = adapter.callTo(ApiConfig.reviews).body as Map;
-      expect(body.containsKey('comment'), isFalse);
-      expect(body['rating'], 5, reason: 'five stars is the default');
-    });
-
-    test('reports the API message when the review is refused', () async {
-      final adapter = _FakeAdapter({})..failWithStatus = 409;
-      final container = _containerWith(adapter);
-      addTearDown(container.dispose);
-
-      _keepAlive(container, reviewControllerProvider);
-      final controller = container.read(reviewControllerProvider.notifier);
       expect(await controller.submit('req-1'), isFalse);
-      expect(container.read(reviewControllerProvider).errorMessage,
-          'Category is no longer available');
-      expect(container.read(reviewControllerProvider).isSubmitting, isFalse);
+
+      final state = container.read(reviewControllerProvider);
+      expect(state.errorMessage, 'Reviews are not available yet.');
+      expect(state.isSubmitting, isFalse);
+      expect(adapter.calls, isEmpty);
     });
   });
 }

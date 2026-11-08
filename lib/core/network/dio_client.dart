@@ -54,7 +54,7 @@ Dio buildDio({
     receiveTimeout: ApiConfig.receiveTimeout,
     contentType: Headers.jsonContentType,
     responseType: ResponseType.json,
-    headers: const {'Accept': 'application/json'},
+    headers: ApiConfig.defaultHeaders,
     // Let the interceptors decide what counts as an error.
     validateStatus: (status) => status != null && status >= 200 && status < 300,
   );
