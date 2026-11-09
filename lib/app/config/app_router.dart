@@ -123,15 +123,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutes.customerHome,
                 builder: (context, state) => const CustomerHomeScreen(),
-                routes: [
-                  GoRoute(
-                    path: 'providers/:id',
-                    parentNavigatorKey: _rootNavigatorKey,
-                    builder: (context, state) => ProviderDetailScreen(
-                      providerId: state.pathParameters['id']!,
-                    ),
-                  ),
-                ],
               ),
             ],
           ),
@@ -154,6 +145,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutes.customerProviderDetail,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => ProviderDetailScreen(
+          providerId: state.pathParameters['id']!,
+        ),
       ),
       GoRoute(
         path: AppRoutes.createRequest,
