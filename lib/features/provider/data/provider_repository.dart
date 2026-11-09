@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/config/api_config.dart';
 import '../../../core/models/json_utils.dart';
-import '../../../core/models/request_status.dart';
 import '../../../core/models/service_request.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/dio_client.dart';
@@ -44,21 +43,17 @@ class ProviderRepository {
   }) async {
     final response = await _api.patch<dynamic>(
       ApiConfig.respondToRequest(id),
-      data: {
-        'status': accept
-            ? RequestStatus.acceptedByProvider.wireValue
-            : RequestStatus.rejectedByProvider.wireValue,
-        if (!accept && rejectionReason != null)
-          'rejectionReason': rejectionReason,
-      },
+      // The API reads only `accept`; it has no field for a rejection reason
+      // yet, so [rejectionReason] is not sent.
+      data: {'accept': accept},
     );
     return _requestOrRefetch(response, id);
   }
 
-  /// The API has no `start` transition: a job goes from accepted straight to
-  /// completed.
+  /// Moves an accepted job to in progress, which unlocks "Mark complete".
   Future<ServiceRequest> startJob(String id) async {
-    throw const ApiException('Starting a job is not supported yet.');
+    final response = await _api.patch<dynamic>(ApiConfig.startRequest(id));
+    return _requestOrRefetch(response, id);
   }
 
   Future<ServiceRequest> completeJob(String id) async {

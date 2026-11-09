@@ -30,10 +30,10 @@ class CustomerHomeScreen extends ConsumerWidget {
         child: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(categoriesProvider);
-            ref.invalidate(providerSearchProvider);
+            ref.invalidate(providerFeedProvider);
             await Future.wait([
               ref.read(categoriesProvider.future),
-              ref.read(providerSearchProvider.future),
+              ref.read(providerFeedProvider.future),
             ]);
           },
           child: CustomScrollView(
@@ -121,9 +121,11 @@ class CustomerHomeScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 24),
                       _SectionHeader(
-                        title: query.categoryId == null
-                            ? 'Top rated near you'
-                            : 'Available for this service',
+                        title: query.search.trim().isNotEmpty
+                            ? 'Results for "${query.search.trim()}"'
+                            : query.categoryId == null
+                                ? 'Top rated near you'
+                                : 'Available for this service',
                       ),
                       const SizedBox(height: 4),
                     ],
@@ -140,7 +142,7 @@ class CustomerHomeScreen extends ConsumerWidget {
                 error: (error, _) => SliverToBoxAdapter(
                   child: ErrorRetryView(
                     message: error.toString(),
-                    onRetry: () => ref.invalidate(providerSearchProvider),
+                    onRetry: () => ref.invalidate(providerFeedProvider),
                   ),
                 ),
                 data: (items) {
@@ -179,28 +181,50 @@ class CustomerHomeScreen extends ConsumerWidget {
   }
 }
 
-class _SearchField extends StatelessWidget {
+/// Instant search box: fires on every keystroke so the provider list filters
+/// live, with a clear button that resets both the field and the query.
+class _SearchField extends StatefulWidget {
   const _SearchField({required this.initialValue, required this.onChanged});
 
   final String initialValue;
   final ValueChanged<String> onChanged;
 
   @override
+  State<_SearchField> createState() => _SearchFieldState();
+}
+
+class _SearchFieldState extends State<_SearchField> {
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initialValue);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      initialValue: initialValue,
-      textInputAction: TextInputAction.search,
-      onFieldSubmitted: onChanged,
-      decoration: InputDecoration(
-        hintText: 'Search plumbers, tutors, electricians...',
-        prefixIcon: const Icon(Icons.search_rounded),
-        suffixIcon: initialValue.isEmpty
-            ? null
-            : IconButton(
-                onPressed: () => onChanged(''),
-                icon: const Icon(Icons.close_rounded),
-                tooltip: 'Clear search',
-              ),
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: _controller,
+      builder: (context, value, _) => TextField(
+        controller: _controller,
+        textInputAction: TextInputAction.search,
+        onChanged: widget.onChanged,
+        decoration: InputDecoration(
+          hintText: 'Search plumbers, tutors, electricians...',
+          prefixIcon: const Icon(Icons.search_rounded),
+          suffixIcon: value.text.isEmpty
+              ? null
+              : IconButton(
+                  onPressed: () {
+                    _controller.clear();
+                    widget.onChanged('');
+                  },
+                  icon: const Icon(Icons.close_rounded),
+                  tooltip: 'Clear search',
+                ),
+        ),
       ),
     );
   }

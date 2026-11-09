@@ -229,7 +229,7 @@ void main() {
   });
 
   group('JobActionController', () {
-    test('accept PATCHes respond with AcceptedByProvider', () async {
+    test('accept PATCHes respond with accept: true', () async {
       final adapter = _FakeAdapter([_job()]);
       final container = _containerWith(adapter);
       addTearDown(container.dispose);
@@ -244,14 +244,15 @@ void main() {
 
       final call = adapter.callTo(ApiConfig.respondToRequest('job-1'));
       expect(call.method, 'PATCH');
-      expect(call.body, containsPair('status', 'AcceptedByProvider'));
+      // The API binds only `accept`; anything else silently reads as a reject.
+      expect(call.body, {'accept': true});
 
       // The feed was refreshed, so the job moved out of the pending bucket.
       expect(container.read(pendingDispatchesProvider), isEmpty);
       expect(container.read(activeJobsProvider), hasLength(1));
     });
 
-    test('reject sends the reason for the admin to re-dispatch', () async {
+    test('reject sends accept: false', () async {
       final adapter = _FakeAdapter([_job()]);
       final container = _containerWith(adapter);
       addTearDown(container.dispose);
@@ -265,8 +266,8 @@ void main() {
       expect(error, isNull);
 
       final call = adapter.callTo(ApiConfig.respondToRequest('job-1'));
-      expect(call.body, containsPair('status', 'RejectedByProvider'));
-      expect(call.body, containsPair('rejectionReason', 'Too far from my area'));
+      // The API has no field for the reason yet, so it is not sent.
+      expect(call.body, {'accept': false});
     });
 
     test('completing an accepted job moves it into the completed bucket',
@@ -290,22 +291,22 @@ void main() {
       expect(container.read(completedJobsProvider), hasLength(1));
     });
 
-    // The API has no `start` transition; accepted jobs go straight to complete.
-    test('start reports that the transition is unsupported', () async {
+    test('start moves an accepted job to in progress', () async {
       final adapter = _FakeAdapter([_job(status: 'AcceptedByProvider')]);
       final container = _containerWith(adapter);
       addTearDown(container.dispose);
 
       await container.read(dispatchedRequestsProvider.future);
-      adapter.calls.clear();
+      adapter.dispatched = [_job(status: 'InProgress')];
 
       expect(
         await container
             .read(jobActionControllerProvider.notifier)
             .start('job-1'),
-        'Starting a job is not supported yet.',
+        isNull,
       );
-      expect(adapter.calls, isEmpty);
+      expect(adapter.callTo(ApiConfig.startRequest('job-1')).method, 'PATCH');
+      expect(container.read(activeJobsProvider), hasLength(1));
       expect(container.read(jobActionControllerProvider), isNull,
           reason: 'the controller must release its lock');
     });

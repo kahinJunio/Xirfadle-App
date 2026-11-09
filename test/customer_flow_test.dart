@@ -120,7 +120,8 @@ void main() {
       final container = _containerWith(adapter);
       addTearDown(container.dispose);
 
-      final providers = await container.read(providerSearchProvider.future);
+      await container.read(providerFeedProvider.future);
+      final providers = container.read(providerSearchProvider).value!;
 
       expect(providers.map((p) => p.id), ['near', 'far', 'offline']);
     });
@@ -132,7 +133,7 @@ void main() {
           _containerWith(adapter, deviceLocation: const LatLng(2.04, 45.31));
       addTearDown(container.dispose);
 
-      await container.read(providerSearchProvider.future);
+      await container.read(providerFeedProvider.future);
 
       final uri = adapter.calls.first;
       expect(uri.path, ApiConfig.providers);
@@ -143,13 +144,55 @@ void main() {
       final container = _containerWith(adapter);
       addTearDown(container.dispose);
 
-      await container.read(providerSearchProvider.future);
+      await container.read(providerFeedProvider.future);
       container.read(providerQueryProvider.notifier).state =
           const ProviderQuery(categoryId: 'cat-plumbing');
-      await container.read(providerSearchProvider.future);
+      await container.read(providerFeedProvider.future);
 
       expect(adapter.calls.where((c) => c.path == ApiConfig.providers),
           hasLength(2));
+    });
+
+    test('filters locally by text without refetching', () async {
+      final adapter = _FakeAdapter({
+        ApiConfig.providers: [
+          {
+            'id': 'a',
+            'fullName': 'Ali Hassan',
+            'categoryName': 'Plumbing',
+            'specialties': ['Pipe fitting'],
+          },
+          {
+            'id': 'b',
+            'fullName': 'Bashir Open',
+            'categoryName': 'Electrical',
+            'specialties': ['Wiring'],
+          },
+        ]
+      });
+      final container = _containerWith(adapter);
+      addTearDown(container.dispose);
+
+      await container.read(providerFeedProvider.future);
+      final callsAfterLoad =
+          adapter.calls.where((c) => c.path == ApiConfig.providers).length;
+
+      // Matches the trade, not just the name.
+      container.read(providerQueryProvider.notifier).state =
+          const ProviderQuery(search: 'plumb');
+      expect(
+        container.read(providerSearchProvider).value!.map((p) => p.id),
+        ['a'],
+      );
+
+      // All tokens must match (Amazon-style AND).
+      container.read(providerQueryProvider.notifier).state =
+          const ProviderQuery(search: 'ali wiring');
+      expect(container.read(providerSearchProvider).value, isEmpty);
+
+      // Filtering is purely local — the feed was never fetched again.
+      expect(adapter.calls.where((c) => c.path == ApiConfig.providers).length,
+          callsAfterLoad);
     });
   });
 

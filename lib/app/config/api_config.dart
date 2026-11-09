@@ -47,6 +47,7 @@ class ApiConfig {
   /// and no by-id read: detail views filter this list.
   static const String assignedRequests = '/provider/requests/assigned';
   static String respondToRequest(String id) => '/provider/requests/$id/respond';
+  static String startRequest(String id) => '/provider/requests/$id/start';
   static String completeRequest(String id) => '/provider/requests/$id/complete';
 
   // ---- Not exposed by the backend ---------------------------------------
@@ -56,5 +57,4 @@ class ApiConfig {
   //   POST  /customer/reviews
   //   GET   /customer/providers/{id}/reviews
   //   PATCH /provider/availability
-  //   PATCH /provider/requests/{id}/start
 }
