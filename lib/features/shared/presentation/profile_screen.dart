@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/config/api_config.dart';
+import '../../../app/config/app_routes.dart';
 import '../../../app/config/app_theme.dart';
 import '../../../core/models/user_role.dart';
 import '../../auth/application/auth_controller.dart';
@@ -117,6 +119,21 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 26),
           ],
           if (user.isProvider) ...[
+            Text('Work',
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.badge_outlined),
+                title: const Text('Professional profile'),
+                subtitle:
+                    const Text('Your trade, bio, specialties and area.'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push(AppRoutes.providerProfile),
+              ),
+            ),
+            const SizedBox(height: 16),
             Text('Availability',
                 style: theme.textTheme.titleSmall
                     ?.copyWith(fontWeight: FontWeight.w800)),

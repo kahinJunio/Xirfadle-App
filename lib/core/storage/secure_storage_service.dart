@@ -45,6 +45,7 @@ class AppPreferences {
 
   static const _activeRoleKey = 'xirfadle.active_role';
   static const _lastPhoneKey = 'xirfadle.last_phone';
+  static const _providerProfilePrefix = 'xirfadle.provider_profile.';
 
   String? get activeRole => _prefs.getString(_activeRoleKey);
   Future<void> setActiveRole(String? role) async {
@@ -58,6 +59,14 @@ class AppPreferences {
   String? get lastPhone => _prefs.getString(_lastPhoneKey);
   Future<void> setLastPhone(String phone) =>
       _prefs.setString(_lastPhoneKey, phone);
+
+  /// The provider's editable professional profile, stored as JSON and keyed by
+  /// user id so several accounts on one device do not overwrite each other.
+  String? providerProfile(String userId) =>
+      _prefs.getString('$_providerProfilePrefix$userId');
+
+  Future<void> setProviderProfile(String userId, String json) =>
+      _prefs.setString('$_providerProfilePrefix$userId', json);
 }
 
 final secureStorageProvider =

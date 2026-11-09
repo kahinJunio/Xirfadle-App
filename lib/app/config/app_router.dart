@@ -16,6 +16,7 @@ import '../../features/customer/presentation/request_confirmation_screen.dart';
 import '../../features/provider/presentation/active_job_screen.dart';
 import '../../features/provider/presentation/job_detail_screen.dart';
 import '../../features/provider/presentation/provider_dashboard.dart';
+import '../../features/provider/presentation/provider_profile_screen.dart';
 import '../../features/provider/presentation/provider_requests_screen.dart';
 import '../../features/shared/presentation/app_shell.dart';
 import '../../features/shared/presentation/profile_screen.dart';
@@ -103,6 +104,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.profile,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.providerProfile,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ProviderProfileScreen(),
       ),
 
       // ---- Customer mode --------------------------------------------------

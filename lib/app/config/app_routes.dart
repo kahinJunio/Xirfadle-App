@@ -18,6 +18,7 @@ class AppRoutes {
   static const providerRequests = '/provider/requests';
   static const providerActiveJob = '/provider/active-job';
   static const providerJobDetail = '/provider/requests/:id';
+  static const providerProfile = '/provider/profile';
 
   static const profile = '/profile';
 
