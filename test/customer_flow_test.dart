@@ -294,10 +294,7 @@ void main() {
   });
 
   group('ReviewController', () {
-    // The API exposes no reviews route, so submitting reports the gap instead
-    // of firing a request that would 404.
-    test('reports that reviews are unavailable without calling the API',
-        () async {
+    test('posts the rating and comment for the request', () async {
       final adapter = _FakeAdapter({});
       final container = _containerWith(adapter);
       addTearDown(container.dispose);
@@ -305,14 +302,36 @@ void main() {
       _keepAlive(container, reviewControllerProvider);
       final controller = container.read(reviewControllerProvider.notifier);
       controller.setRating(4);
-      controller.setComment('Fast and tidy work.');
+      controller.setComment('  Fast and tidy work. ');
+
+      expect(await controller.submit('req-1'), isTrue);
+
+      final call = adapter.callTo(ApiConfig.reviews);
+      expect(call.method, 'POST');
+      expect(call.body, {
+        'serviceRequestId': 'req-1',
+        'rating': 4,
+        'comment': 'Fast and tidy work.',
+      });
+
+      final state = container.read(reviewControllerProvider);
+      expect(state.errorMessage, isNull);
+      expect(state.isSubmitting, isFalse);
+    });
+
+    test('surfaces the API message when the review is refused', () async {
+      final adapter = _FakeAdapter({})..failWithStatus = 409;
+      final container = _containerWith(adapter);
+      addTearDown(container.dispose);
+
+      _keepAlive(container, reviewControllerProvider);
+      final controller = container.read(reviewControllerProvider.notifier);
 
       expect(await controller.submit('req-1'), isFalse);
 
       final state = container.read(reviewControllerProvider);
-      expect(state.errorMessage, 'Reviews are not available yet.');
+      expect(state.errorMessage, isNotNull);
       expect(state.isSubmitting, isFalse);
-      expect(adapter.calls, isEmpty);
     });
   });
 }

@@ -92,6 +92,7 @@ class ProviderReview {
             fallback: 'Customer'),
         rating: asInt(json, ['rating', 'stars'], fallback: 5),
         comment: asStringOrNull(json, ['comment', 'text', 'review']),
-        createdAt: asDateOrNull(json, ['createdAt', 'date', 'createdOn']),
+        createdAt:
+            asDateOrNull(json, ['createdAtUtc', 'createdAt', 'date', 'createdOn']),
       );
 }

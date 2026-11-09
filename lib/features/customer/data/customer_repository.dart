@@ -54,10 +54,10 @@ class CustomerRepository {
     return ServiceProvider.fromJson(asObject(response));
   }
 
-  /// The API exposes no reviews route, so the detail screen renders whatever
-  /// the provider payload already carries and nothing more.
-  Future<List<ProviderReview>> fetchProviderReviews(String id) async =>
-      const <ProviderReview>[];
+  Future<List<ProviderReview>> fetchProviderReviews(String id) async {
+    final response = await _api.get<dynamic>(ApiConfig.providerReviews(id));
+    return asObjectList(response).map(ProviderReview.fromJson).toList();
+  }
 
   /// Submits a job; the backend initialises it to `PendingAdminReview`.
   Future<ServiceRequest> createRequest(CreateRequestPayload payload) async {
@@ -97,7 +97,11 @@ class CustomerRepository {
     required int rating,
     String? comment,
   }) async {
-    throw const ApiException('Reviews are not available yet.');
+    await _api.post<dynamic>(ApiConfig.reviews, data: {
+      'serviceRequestId': requestId,
+      'rating': rating,
+      if (comment != null && comment.trim().isNotEmpty) 'comment': comment.trim(),
+    });
   }
 }
 

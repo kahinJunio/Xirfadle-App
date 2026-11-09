@@ -36,6 +36,10 @@ class ApiConfig {
   static const String categories = '/customer/categories';
   static const String providers = '/customer/providers';
   static String providerDetail(String id) => '/customer/providers/$id';
+  static String providerReviews(String id) => '/customer/providers/$id/reviews';
+
+  /// POST `{serviceRequestId, rating, comment}` for a completed request.
+  static const String reviews = '/customer/reviews';
 
   /// POST only. The backend has no `GET /customer/requests`; listing goes
   /// through [myRequests] and single requests are picked out of that list.
@@ -54,7 +58,5 @@ class ApiConfig {
   // The API surface has no route for these, so the features that used them
   // are disabled client-side rather than firing requests that 404:
   //   PATCH /customer/requests/{id}/cancel
-  //   POST  /customer/reviews
-  //   GET   /customer/providers/{id}/reviews
   //   PATCH /provider/availability
 }
